@@ -5,9 +5,13 @@ This script gathers all the ISMIP-HOM experiments' data.
 """
 
 import os
+import math
 import numpy
 import scipy
 import fnmatch
+
+import matplotlib.pyplot as plt
+import pprint as pp
 
 # Location of data
 #TODO: argparse this.
@@ -88,6 +92,9 @@ class ismip_datum:
         data = numpy.loadtxt(self.df)
         return data
 
+    def make_grid(self):
+        self.xy_array = 0
+
     def display(self):
         print("Data file: "+self.df)
         print("Order: "+self.order)
@@ -158,7 +165,30 @@ for i, df in enumerate(data_files):
     all_data.append(ismip_datum(df))
     #all_data[i].display()
     #print("------")
-    
+
+## see what experiments are in each order
+#A = set([data.E for data in all_data if data.order == 'full_stokes' ])
+#pp.pprint(A)
+
+#for data in all_data:
+#    if data.E == 'a' and data.order == 'full_stokes':
+#        pp.pprint(data.array[:,0:2])
+#        print('----------------------------')
+
+#for data in all_data:
+#    if data.E == 'a' and data.order == 'full_stokes':
+#        plt.scatter(data.array[:,0],data.array[:,1],cmap ='RdYlGn_r')
+#        plt.show()
+
+## see if all are square grids or not...
+#A = [len(data.array[:,1]) for data in all_data if data.order == 'full_stokes' ]
+#pp.pprint( [math.sqrt(a) for a in A] )
+
+
+
+#----------------
+# The cism grids 
+#----------------
 grd = []
 for sz in sizes['a']:
     grd.append(cism_grids(sz))
@@ -170,5 +200,13 @@ grids = {'a': grd,
          'e': [],
          'f': [cism_grids(sizes['f'][0])],
         }
+
+
+
+
+
+
+
+
 
 
