@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 """
 Python utility to plot a comparison of the original data to the interpolated
 data that is the result of the interpolate_ismip.py script.  

@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 """
 Python utility to interpolate ISMIP benchmark data onto regular grids.
 Current grid arrangement is compatible with CISM output from ISMIP tests.
@@ -90,7 +92,6 @@ def interp_exp_c(fname, out_dir):
     out_points = [[i,j] for i in x_out for j in y_out]
     x_out = np.transpose(out_points)[0]
     y_out = np.transpose(out_points)[1]
-
 
     # Interpolate each list separately
     print("    Interpolating data....")

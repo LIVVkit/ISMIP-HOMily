@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 """
 Python utility to produce a master data set from the interpolated data sets 
 produced by the interpolate_ismip.py script.  Two potential files are created,
@@ -15,6 +17,7 @@ import fnmatch
 import numpy as np
 from itertools import product
 from scipy import interpolate
+
 
 def parse_args(args):
     parser = argparse.ArgumentParser(description="ISMIP data interpolation utility.",
@@ -41,11 +44,14 @@ def assimilate_exp_a(file_list, model, opts):
     print("Beginning analysis of experiment A for " + model + " models....")
     res_80 = fnmatch.filter(file_list, '?????080_interp.txt')
     res_20 = fnmatch.filter(file_list, '?????020_interp.txt')
-    header = ['x', 'y', 'vs_x mean', 'vs_x stdev', 'vs_x min', 'vs_x max', 'vs_y mean',
-              'vs_y stdev', 'vs_y min', 'vs_y max', 'tb_xy mean', 'tb_xy stdev', 
-              'tb_xy min', 'tb_xy max', 'tb_yz mean', 'tb_yz stdev', 'tb_yz min',
-              'tb_yz max','dp mean','dp stdev','dp min','dp max']
+    header = ['x', 'y',  'vs_x mean',  'vs_x stdev',  'vs_x min',  'vs_x max', 
+                         'vs_y mean',  'vs_y stdev',  'vs_y min',  'vs_y max', 
+                         'vs_z mean',  'vs_z stdev',  'vs_z min',  'vs_z max', 
+                        'tb_xy mean', 'tb_xy stdev', 'tb_xy min', 'tb_xy max', 
+                        'tb_yz mean', 'tb_yz stdev', 'tb_yz min', 'tb_yz max',
+                           'dp mean',    'dp stdev',    'dp min',    'dp max']
 
+    print(len(res_80))
     X, Y, VS_X, VS_Y, VS_Z, TB_XY, TB_YZ, DP = [],[],[],[],[],[],[],[]
     for fname in res_80:
         fpath = os.path.join(opts.input, model,fname)
@@ -68,10 +74,12 @@ def assimilate_exp_a(file_list, model, opts):
     TB_YZ = get_stats(TB_YZ)
     DP = get_stats(DP)
 
-    data = np.transpose([X,Y,VS_X[0], VS_X[1], VS_X[2], VS_X[3],
-        VS_Y[0], VS_Y[1], VS_Y[2], VS_Y[3], VS_Z[0], VS_Z[1], VS_Z[2], VS_Z[3],
-        TB_XY[0], TB_XY[1], TB_XY[2], TB_XY[3], TB_YZ[0], TB_YZ[1], 
-        TB_YZ[2], TB_YZ[3], DP[0], DP[1], DP[2], DP[3]])
+    data = np.transpose([X,Y, VS_X[0],  VS_X[1],  VS_X[2],  VS_X[3],
+                              VS_Y[0],  VS_Y[1],  VS_Y[2],  VS_Y[3], 
+                              VS_Z[0],  VS_Z[1],  VS_Z[2],  VS_Z[3], 
+                             TB_XY[0], TB_XY[1], TB_XY[2], TB_XY[3], 
+                             TB_YZ[0], TB_YZ[1], TB_YZ[2], TB_YZ[3], 
+                                DP[0],    DP[1],    DP[2],    DP[3]])
     fmt = "%.6f"
     with open('ismip-hom-a.0080.' + model +'.txt','wb') as f:
         writer = csv.writer(f)
@@ -100,10 +108,12 @@ def assimilate_exp_a(file_list, model, opts):
     TB_YZ = get_stats(TB_YZ)
     DP = get_stats(DP)
 
-    data = np.transpose([X,Y,VS_X[0], VS_X[1], VS_X[2], VS_X[3],
-        VS_Y[0], VS_Y[1], VS_Y[2], VS_Y[3], VS_Z[0], VS_Z[1], VS_Z[2], VS_Z[3],
-        TB_XY[0], TB_XY[1], TB_XY[2], TB_XY[3], TB_YZ[0], TB_YZ[1], 
-        TB_YZ[2], TB_YZ[3], DP[0], DP[1], DP[2], DP[3]])
+    data = np.transpose([X,Y, VS_X[0],  VS_X[1],  VS_X[2],  VS_X[3],
+                              VS_Y[0],  VS_Y[1],  VS_Y[2],  VS_Y[3], 
+                              VS_Z[0],  VS_Z[1],  VS_Z[2],  VS_Z[3],
+                             TB_XY[0], TB_XY[1], TB_XY[2], TB_XY[3], 
+                             TB_YZ[0], TB_YZ[1], TB_YZ[2], TB_YZ[3], 
+                                DP[0],    DP[1],    DP[2],    DP[3]])
     fmt = "%.6f"
     with open('ismip-hom-a.0020.' + model + '.txt','wb') as f:
         writer = csv.writer(f)
