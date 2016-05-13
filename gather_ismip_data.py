@@ -5,21 +5,16 @@ This script gathers all the ISMIP-HOM experiments' data.
 """
 
 import os
-import math
 import numpy
 import scipy
+import scipy.interpolate
 import fnmatch
 
 import matplotlib.pyplot as plt
-import pprint as pp
 
 # Location of data
 #TODO: argparse this.
 ismip_data = './ismip_all'
-
-# defaults for cism grid
-ewn = 40    
-nsn = 40
 
 #--------------------------
 # ISMIP-HOM data constants 
@@ -36,21 +31,15 @@ higher_order = lmla + l1l2 + l1l1 + ltsml
 
 sia = ['oso1']
 
+# The ISMIP-HOM data file headers for each experiment.
+#NOTE: These aren't used and are just here for informational purposes. 
 header = {'a':['x_hat','y_hat','vx_surf','vy_surf','tau_xz','tau_yz','del_p'],
           'b':['x_hat','vx_surf','vz_surf','tau_xz','del_p'],
-          'c':['x_hat','y_hat','vx_surf','vy_surf','vz_surf','vx_base',
-               'vy_base','tau_xz','tau_yz','del_p'],
+          'c':['x_hat','y_hat','vx_surf','vy_surf','vz_surf','vx_base', 'vy_base','tau_xz','tau_yz','del_p'],
           'd':['x_hat','vx_surf','vz_surf','vx_base','tau_xz','del_p'],
           'e':['x_hat','vx_surf','vz_surf','tau_xz','del_p'],
-          'f':['x_hat','y_hat','z_surf','vx','vy','vz']
+          'f':['x_hat','y_hat','z_surf','vx','vy','vz'],
          }
-sizes = {'a': [5, 10, 20, 40, 80, 160],
-         'b': [5, 10, 20, 40, 80, 160],
-         'c': [5, 10, 20, 40, 80, 160],
-         'd': [5, 10, 20, 40, 80, 160],
-         'e': [],
-         'f': [100],
-        }
 
 
 class ismip_datum:
@@ -73,8 +62,20 @@ class ismip_datum:
         if self.order != 'unknown':
             self.array = self.load_data()
         else:
-            self.array = []
+            self.array = numpy.array([])
+        
+        # get interpolation grid
+        self.make_grid(self.E)
 
+        # interpolate the data
+        if self.x_hat_grid.size:
+            self.vx_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vy_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) )
+            
+            self.vx_surf_i = self.vx_surf_i.reshape(self.x_hat_grid.shape)
+            self.vy_surf_i = self.vy_surf_i.reshape(self.x_hat_grid.shape)
+            self.vnorm_surf_i = self.vnorm_surf_i.reshape(self.x_hat_grid.shape)
 
     def parse_file(self, data_file):
         """
@@ -85,15 +86,32 @@ class ismip_datum:
                                the zone of zero basal raction
                  experiment f: the slip ratio; either 000 or 001.
         """
-        code_name = os.path.basename(os.path.splitext(data_file)[0])
+        code_name = str.lower(os.path.basename(os.path.splitext(data_file)[0]))
         return (code_name[0:4], code_name[4], code_name[5:]) # (model, experiment, length)
 
     def load_data(self):
         data = numpy.loadtxt(self.df)
         return data
 
-    def make_grid(self):
-        self.xy_array = 0
+    def make_grid(self, exp):
+        """
+        For experiment A and C, the plots are made at y = L/4 or 1/4 y_hat. So,
+        we'll regrid that data on a grid that has that point. 
+        """
+
+        if exp == 'a' or exp == 'c':
+            #NOTE: linspace(start, stop, num) returns num points across the
+            #      start->stop interval, including start and stop. So, to always hit
+            #      1/4, you need X+1 points, where X%4 == 0. 
+            self.points_p_quarter = 10
+            self.x_hat = numpy.linspace(0.0, 1.0, self.points_p_quarter*4+1)
+            self.y_hat = numpy.linspace(0.0, 1.0, self.points_p_quarter*4+1)
+            self.x_hat_grid, self.y_hat_grid = scipy.meshgrid(self.x_hat, self.y_hat)
+        else:
+            self.x_hat = numpy.array([])
+            self.y_hat = numpy.array([])
+            self.x_hat_grid = numpy.array([])
+            self.y_hat_grid = numpy.array([])
 
     def display(self):
         print("Data file: "+self.df)
@@ -102,51 +120,6 @@ class ismip_datum:
         print("Experiment: "+self.E)
         print("Length: "+self.L)
 
-
-#----------------------
-# CISM ISMIP-HOM grids 
-#----------------------
-class cism_grids:
-    """A class to create a CISM grid for comparison."""
-    #NOTE: the *_extend variables appear to be on the x,y grids, but are actually on the staggered grid. 
-    #      These fields contain the ice velocity computed at the upper right corner of each grid cell and the
-    #      additional row/columninclude the first ghost value past ewn/nsn, which is valid at both 0.0 and 1.0
-    #      on the non-dimensional coordinate system (*_hat). Note, CISM uses a cell-centered grid.
-    #
-    #      That is, CISM is setup, in the non-dimensional coordinate system, with the unstaggered grid going
-    #      from [{-0.0125}, 0.0125, 0.0375, ..., 0.9875, {1.0125}] where {}-ed points are ghost points (a 
-    #      cell centered grid), and the staggered points going from [{0}, 0.025, 0.05, ..., 0.975, {1.0}]. 
-    #      The ghost points are NOT included in the netCDF file for either grid. 
-    #
-    #      So, on the extended grid, the length of the grids is the same as the regular x,y grid and reported
-    #      to be on the x,y grid in the netCDF file. BUT, it's really on the staggered grid with the final 
-    #      ghost point appended to the end of the array. Note, this is equivelent to reporting the upper-right 
-    #      corner of the regular grid x,y cells. Because of the periodic BC, the final row/column {1.0} is 
-    #      equal to the un-reported ghost points at {0.0}, and so, by making an extra-extended grid, with both
-    #      ghost points, all interpolated points should fall within the convex hull of the extended grid.
-
-    def __init__(self, size):
-        self.size = size
-        self.nx = ewn
-        self.ny = nsn
-        self.dx = float(self.size)*1000./float(self.nx)
-        self.dy = float(self.size)*1000./float(self.ny)
-        
-        self.x = [(i+0.5)*self.dx for i in range(self.nx)] # unstaggered grid (x1,y1)
-        self.y = [(j+0.5)*self.dy for j in range(self.ny)]
-        self.y_grid, self.x_grid = scipy.meshgrid(self.y[:], self.x[:], indexing='ij')
-        
-        self.x_hat = [i/(self.size*1000) for i in self.x]
-        self.y_hat = [i/(self.size*1000) for i in self.y]
-        self.y_hat_grid, self.x_hat_grid = scipy.meshgrid(self.y_hat[:], self.x_hat[:], indexing='ij')
-        
-        self.x_stag = [(i+1)*self.dx for i in range(self.nx-1)] # staggered grid (x0,y0)
-        self.y_stag = [(j+1)*self.dy for j in range(self.ny-1)]
-        self.y_stag_grid, self.x_stag_grid = scipy.meshgrid(self.y_stag[:], self.x_stag[:], indexing='ij')
-
-        self.x_hat_stag = [i/(self.size*1000) for i in self.x_stag]
-        self.y_hat_stag = [i/(self.size*1000) for i in self.y_stag]
-        self.y_hat_stag_grid, self.x_hat_stag_grid = scipy.meshgrid(self.y_hat_stag[:], self.x_hat_stag[:], indexing='ij')
 
 #-----------
 # The files 
@@ -166,47 +139,193 @@ for i, df in enumerate(data_files):
     #all_data[i].display()
     #print("------")
 
-## see what experiments are in each order
-#A = set([data.E for data in all_data if data.order == 'full_stokes' ])
-#pp.pprint(A)
 
-#for data in all_data:
-#    if data.E == 'a' and data.order == 'full_stokes':
-#        pp.pprint(data.array[:,0:2])
-#        print('----------------------------')
+#------------------------------------------------------------------------
+# Recreate all the analysis figures in:
+# Pattyn, F., et al. (2008). Benchmark experiments for higher-order and 
+# full-Stokes ice sheet models (ISMIP-HOM). The Cryosphere, 2, 95--108.
+# doi:10.5194/tcd-2-111-200. 
+# http://www.the-cryosphere.net/2/95/2008/tc-2-95-2008.html
+#------------------------------------------------------------------------
+#NOTE: Exp. A and C plot at y = L/4, X = [0,..,1]x_hat
+#NOTE: Exp. F plots at the central flowline in the ice-flow direction
 
-#for data in all_data:
-#    if data.E == 'a' and data.order == 'full_stokes':
-#        plt.scatter(data.array[:,0],data.array[:,1],cmap ='RdYlGn_r')
-#        plt.show()
+fs_data = [data for data in all_data if data.order == 'full_stokes']
+ho_data = [data for data in all_data if data.order in 'higher_order']
 
-## see if all are square grids or not...
-#A = [len(data.array[:,1]) for data in all_data if data.order == 'full_stokes' ]
-#pp.pprint( [math.sqrt(a) for a in A] )
+# figure 5: Results for Exp. A: norm of the surface velocity across the bump at
+# y=L/4 for different length scales L. The mean value and standard deviation are
+# shown for both types of models. 
+#   There are 6 plot boxes for 5,10,20,40,80,160 km, and all have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
+fs_data_a = [data for data in fs_data if data.E == 'a']
+ho_data_a = [data for data in ho_data if data.E == 'a']
+
+plt.figure(1, figsize=(10,8), dpi=150)
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+
+plot_ls = ['005','010','020','040','080','160']
+for i, l in enumerate(plot_ls):
+    a_fs_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in fs_data_a if data.L == l])
+  
+    a_fs_mean = numpy.mean(a_fs_lines,0)
+    a_fs_amin = numpy.amin(a_fs_lines,0)
+    a_fs_amax = numpy.amax(a_fs_lines,0)
+
+    a_ho_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in ho_data_a if data.L == l])
+  
+    a_ho_mean = numpy.mean(a_ho_lines,0)
+    a_ho_amin = numpy.amin(a_ho_lines,0)
+    a_ho_amax = numpy.amax(a_ho_lines,0)
+
+    plt.subplot(2,3,i+1)
+    
+    plt.fill_between(fs_data_a[0].x_hat.T, a_ho_amin, a_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_a[0].x_hat.T, a_fs_amin, a_fs_amax, facecolor='blue', alpha=0.5)
+    
+    plt.plot(fs_data_a[0].x_hat.T, a_fs_mean, 'b-', linewidth=2)
+    plt.plot(fs_data_a[0].x_hat.T, a_ho_mean, 'g-', linewidth=2)
+
+    if i+1 > 3:
+        plt.xlabel('Normalized x')
+    if i+1 == 1 or i+1 == 4:
+        plt.ylabel('Velocity (m a$^{-1}$)')
+    
+    plt.title(str(int(l))+'km')
+
+plt.savefig('ExpA_Fig5', bbox_inches='tight')
+plt.show()
 
 
+# figure 8: Results for Exp. C: norm of the surface velocity at y=L/4 for
+# different length scales L. The mean value and standard deviation are shown for
+# both types of models. 
+#   There are 6 plot boxes for 5,10,20,40,80,160 km, and all have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
+fs_data_c = [data for data in fs_data if data.E == 'c']
+ho_data_c = [data for data in ho_data if data.E == 'c']
 
-#----------------
-# The cism grids 
-#----------------
-grd = []
-for sz in sizes['a']:
-    grd.append(cism_grids(sz))
+plt.figure(2, figsize=(10,8), dpi=150)
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
 
-grids = {'a': grd,
-         'b': grd,
-         'c': grd,
-         'd': grd,
-         'e': [],
-         'f': [cism_grids(sizes['f'][0])],
-        }
+plot_ls = ['005','010','020','040','080','160']
+for i, l in enumerate(plot_ls):
+    c_fs_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in fs_data_c if data.L == l])
+  
+    c_fs_mean = numpy.mean(c_fs_lines,0)
+    c_fs_amin = numpy.amin(c_fs_lines,0)
+    c_fs_amax = numpy.amax(c_fs_lines,0)
+
+    c_ho_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in ho_data_c if data.L == l])
+  
+    c_ho_mean = numpy.mean(c_ho_lines,0)
+    c_ho_amin = numpy.amin(c_ho_lines,0)
+    c_ho_amax = numpy.amax(c_ho_lines,0)
+
+    plt.subplot(2,3,i+1)
+    
+    plt.fill_between(fs_data_c[0].x_hat.T, c_ho_amin, c_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_c[0].x_hat.T, c_fs_amin, c_fs_amax, facecolor='blue', alpha=0.5)
+    
+    plt.plot(fs_data_c[0].x_hat.T, c_fs_mean, 'b-', linewidth=2)
+    plt.plot(fs_data_c[0].x_hat.T, c_ho_mean, 'g-', linewidth=2)
+
+    if i+1 > 3:
+        plt.xlabel('Normalized x')
+    if i+1 == 1 or i+1 == 4:
+        plt.ylabel('Velocity (m a$^{-1}$)')
+    
+    plt.title(str(int(l))+'km')
+
+plt.savefig('ExpC_Fig8', bbox_inches='tight')
+plt.show()
 
 
+# figure 12: Stead state surface elevation along the central flowline for Exp. F
+# for the no-sliding (top) and sliding (bottom) experiment. The black line
+# indicates the analytical solution [Note: I don't actually see this in the
+# figure].
+#   The 2 plot boxes have: 
+#       x_title     = Distance from center (km)
+#       y_title     = Surface (m)
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
 
 
+# figure 13: Norm of the stead state surface velocit along the central flowline for Exp. F
+# for the no-sliding (top) and sliding (bottom) experiment. The black line
+# indicates the analytical solution [Note: I don't actually see this in the
+# figure].
+#   The 2 plot boxes have: 
+#       x_title     = Distance from center (km)
+#       y_title     = Surface (m)
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
 
 
+#NOTE: Skipping this one as CISM is only running experiments A, C and F.
+# figure 6: Results for Exp. B: norm of the surface velocity for different
+# length scales L. The mean value and standard deviation are # shown for both
+# types of models.
+#   There are 6 plot boxes for 5,10,20,40,80,160 km, and all have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
 
 
+#NOTE: Skipping this one as CISM is only running experiments A, C and F.
+# figure 9: Results for Exp. D: norm of the surface velocity for different
+# length scales L. The mean value and standard deviation are shown for both
+# types of models. 
+#   There are 6 plot boxes for 5,10,20,40,80,160 km, and all have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
+
+
+#NOTE: Skipping this one as CISM is only running experiments A, C and F.
+# figure 10: Surface velocity in the direction of the ice flow for Exp. E for
+# the no-sliding (top) and sliding (bottom) experiment.
+#   The 2 plot boxes have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
+
+
+#NOTE: Skipping this one as CISM is only running experiments A, C and F.
+# figure 11: Basal shear stress in the direction of the ice flow for Exp. E for
+# the no-sliding (top) and sliding (bottom) experiment.
+#   The 2 plot boxes have: 
+#       x_title     = Normalized x
+#       y_title     = Velocity (m a^{-1})
+#       Blue line   = FS Mean
+#       Blue shade  = FS range
+#       Green line  = NFS mean
+#       Green shade = NFS range
 
 
