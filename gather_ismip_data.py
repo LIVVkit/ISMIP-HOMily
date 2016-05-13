@@ -7,9 +7,9 @@ This script gathers all the ISMIP-HOM experiments' data.
 import os
 import numpy
 import scipy
-import scipy.interpolate
 import fnmatch
 
+import scipy.interpolate
 import matplotlib.pyplot as plt
 
 # Location of data
@@ -68,14 +68,7 @@ class ismip_datum:
         self.make_grid(self.E)
 
         # interpolate the data
-        if self.x_hat_grid.size:
-            self.vx_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
-            self.vy_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
-            self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) )
-            
-            self.vx_surf_i = self.vx_surf_i.reshape(self.x_hat_grid.shape)
-            self.vy_surf_i = self.vy_surf_i.reshape(self.x_hat_grid.shape)
-            self.vnorm_surf_i = self.vnorm_surf_i.reshape(self.x_hat_grid.shape)
+        self.interp_data(self.E)
 
     def parse_file(self, data_file):
         """
@@ -95,15 +88,15 @@ class ismip_datum:
 
     def make_grid(self, exp):
         """
-        For experiment A and C, the plots are made at y = L/4 or 1/4 y_hat. So,
-        we'll regrid that data on a grid that has that point. 
+        For experiment A and C, the plots are made at y = L/4 or 1/4 y_hat. For
+        experiment F, the plots are made along 1/2 x_hat. 
         """
 
-        if exp == 'a' or exp == 'c':
+        if exp in  ['a','c','f']:
             #NOTE: linspace(start, stop, num) returns num points across the
             #      start->stop interval, including start and stop. So, to always hit
-            #      1/4, you need X+1 points, where X%4 == 0. 
-            self.points_p_quarter = 10
+            #      1/4 and 1/2, you need X+1 points, where X%4 == 0. 
+            self.points_p_quarter = 25
             self.x_hat = numpy.linspace(0.0, 1.0, self.points_p_quarter*4+1)
             self.y_hat = numpy.linspace(0.0, 1.0, self.points_p_quarter*4+1)
             self.x_hat_grid, self.y_hat_grid = scipy.meshgrid(self.x_hat, self.y_hat)
@@ -112,6 +105,35 @@ class ismip_datum:
             self.y_hat = numpy.array([])
             self.x_hat_grid = numpy.array([])
             self.y_hat_grid = numpy.array([])
+
+    def interp_data(self, exp):
+        if self.x_hat_grid.size and exp in ['a','c']:
+            self.vx_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vy_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            if exp in ['c']:
+                self.vz_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,4], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+                self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) + numpy.square(self.vz_surf_i) )
+            else:
+                self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) )
+            
+            self.vx_surf_i = self.vx_surf_i.reshape(self.x_hat_grid.shape)
+            self.vy_surf_i = self.vy_surf_i.reshape(self.x_hat_grid.shape)
+            if exp in ['c']:
+                self.vz_surf_i = self.vz_surf_i.reshape(self.x_hat_grid.shape)
+            self.vnorm_surf_i = self.vnorm_surf_i.reshape(self.x_hat_grid.shape)
+
+        elif self.x_hat_grid.size and exp in ['f']:
+            self.surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vx_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vy_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,4], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vz_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,5], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) + numpy.square(self.vz_surf_i) )
+            
+            self.surf_i = self.surf_i.reshape(self.x_hat_grid.shape)
+            self.vx_surf_i = self.vx_surf_i.reshape(self.x_hat_grid.shape)
+            self.vy_surf_i = self.vy_surf_i.reshape(self.x_hat_grid.shape)
+            self.vz_surf_i = self.vz_surf_i.reshape(self.x_hat_grid.shape)
+            self.vnorm_surf_i = self.vnorm_surf_i.reshape(self.x_hat_grid.shape)
 
     def display(self):
         print("Data file: "+self.df)
@@ -147,8 +169,9 @@ for i, df in enumerate(data_files):
 # doi:10.5194/tcd-2-111-200. 
 # http://www.the-cryosphere.net/2/95/2008/tc-2-95-2008.html
 #------------------------------------------------------------------------
-#NOTE: Exp. A and C plot at y = L/4, X = [0,..,1]x_hat
+#NOTE: Exp. A and C plot at y = L/4 or 1/4 y_hat, x = [0,..,1]x_hat
 #NOTE: Exp. F plots at the central flowline in the ice-flow direction
+#         y = [0,..,1]y_hat, x = 1/2 x_hat
 
 fs_data = [data for data in all_data if data.order == 'full_stokes']
 ho_data = [data for data in all_data if data.order in 'higher_order']
@@ -166,7 +189,7 @@ ho_data = [data for data in all_data if data.order in 'higher_order']
 fs_data_a = [data for data in fs_data if data.E == 'a']
 ho_data_a = [data for data in ho_data if data.E == 'a']
 
-plt.figure(1, figsize=(10,8), dpi=150)
+plt.figure(5, figsize=(10,8), dpi=150)
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
@@ -216,7 +239,7 @@ plt.show()
 fs_data_c = [data for data in fs_data if data.E == 'c']
 ho_data_c = [data for data in ho_data if data.E == 'c']
 
-plt.figure(2, figsize=(10,8), dpi=150)
+plt.figure(8, figsize=(10,8), dpi=150)
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
 
@@ -264,6 +287,46 @@ plt.show()
 #       Blue shade  = FS range
 #       Green line  = NFS mean
 #       Green shade = NFS range
+fs_data_f = [data for data in fs_data if data.E == 'f']
+ho_data_f = [data for data in ho_data if data.E == 'f']
+
+plt.figure(12, figsize=(10,8), dpi=150)
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+
+plot_ls = ['000','001']
+for i, l in enumerate(plot_ls):
+    f_fs_lines = numpy.array([data.surf_i[data.points_p_quarter*2,:] for data in fs_data_f if data.L == l])
+  
+    f_fs_mean = numpy.mean(f_fs_lines,0)
+    f_fs_amin = numpy.amin(f_fs_lines,0)
+    f_fs_amax = numpy.amax(f_fs_lines,0)
+
+    f_ho_lines = numpy.array([data.surf_i[data.points_p_quarter*2,:] for data in ho_data_f if data.L == l])
+  
+    f_ho_mean = numpy.mean(f_ho_lines,0)
+    f_ho_amin = numpy.amin(f_ho_lines,0)
+    f_ho_amax = numpy.amax(f_ho_lines,0)
+
+    plt.subplot(2,1,i+1)
+    
+    plt.fill_between(fs_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
+    
+    plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
+    plt.plot(fs_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+
+    if i+1 > 1:
+        plt.xlabel('Distance from center (km)')
+    if l == '000':
+        plt.title('No-Slip Bed')
+    else:
+        plt.title('Slip Bed')
+
+    plt.ylabel('Surface (m)')
+
+plt.savefig('ExpF_Fig12', bbox_inches='tight')
+plt.show()
 
 
 # figure 13: Norm of the stead state surface velocit along the central flowline for Exp. F
@@ -277,9 +340,62 @@ plt.show()
 #       Blue shade  = FS range
 #       Green line  = NFS mean
 #       Green shade = NFS range
+plt.figure(13, figsize=(10,8), dpi=150)
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
+
+plot_ls = ['000','001']
+for i, l in enumerate(plot_ls):
+    f_fs_lines = numpy.array([data.vnorm_surf_i[data.points_p_quarter*2,:] for data in fs_data_f if data.L == l])
+  
+    f_fs_mean = numpy.mean(f_fs_lines,0)
+    f_fs_amin = numpy.amin(f_fs_lines,0)
+    f_fs_amax = numpy.amax(f_fs_lines,0)
+
+    f_ho_lines = numpy.array([data.vnorm_surf_i[data.points_p_quarter*2,:] for data in ho_data_f if data.L == l])
+  
+    f_ho_mean = numpy.mean(f_ho_lines,0)
+    f_ho_amin = numpy.amin(f_ho_lines,0)
+    f_ho_amax = numpy.amax(f_ho_lines,0)
+
+    plt.subplot(2,1,i+1)
+    
+    plt.fill_between(fs_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
+    
+    plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
+    plt.plot(fs_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+
+    if i+1 > 1:
+        plt.xlabel('Distance from center (km)')
+    if l == '000':
+        plt.title('No-Slip Bed')
+    else:
+        plt.title('Slip Bed')
+
+    plt.ylabel('Velocity (m a$^{-1}$)')
+
+plt.savefig('ExpF_Fig13', bbox_inches='tight')
+plt.show()
 
 
-#NOTE: Skipping this one as CISM is only running experiments A, C and F.
+#TODO: Ouput plot data.
+
+
+#FIXME: There are some problems with the plots.
+#       Fig. 5; 5km. In our plots there is an downward wiggle in the full stokes
+#                    solutions on the velocity peak at ~ 3/4 x_hat shown in the 
+#                    paper figure. Why?
+#FIXME: Fig. 12 and 13. There is a much, much broader range in our plots than
+#                       shown in the paper. Why?
+
+
+
+
+#----------------------------------------------------------------------------
+#NOTE: Skipping these figures as CISM is only running experiments A, C and F.
+#----------------------------------------------------------------------------
+
 # figure 6: Results for Exp. B: norm of the surface velocity for different
 # length scales L. The mean value and standard deviation are # shown for both
 # types of models.
@@ -292,7 +408,6 @@ plt.show()
 #       Green shade = NFS range
 
 
-#NOTE: Skipping this one as CISM is only running experiments A, C and F.
 # figure 9: Results for Exp. D: norm of the surface velocity for different
 # length scales L. The mean value and standard deviation are shown for both
 # types of models. 
@@ -305,7 +420,6 @@ plt.show()
 #       Green shade = NFS range
 
 
-#NOTE: Skipping this one as CISM is only running experiments A, C and F.
 # figure 10: Surface velocity in the direction of the ice flow for Exp. E for
 # the no-sliding (top) and sliding (bottom) experiment.
 #   The 2 plot boxes have: 
@@ -316,8 +430,6 @@ plt.show()
 #       Green line  = NFS mean
 #       Green shade = NFS range
 
-
-#NOTE: Skipping this one as CISM is only running experiments A, C and F.
 # figure 11: Basal shear stress in the direction of the ice flow for Exp. E for
 # the no-sliding (top) and sliding (bottom) experiment.
 #   The 2 plot boxes have: 
