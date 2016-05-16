@@ -19,9 +19,13 @@ import fnmatch
 import scipy.interpolate
 import matplotlib.pyplot as plt
 
-# Location of data
+# Location of ISMIP-HOM data
 #TODO: argparse this.
 ismip_data = './ismip_all'
+
+# Location to output files
+#TODO: argparse this.
+out_path = './output/'
 
 #--------------------------
 # ISMIP-HOM data constants 
@@ -47,6 +51,18 @@ header = {'a':['x_hat','y_hat','vx_surf','vy_surf','tau_xz','tau_yz','del_p'],
           'e':['x_hat','vx_surf','vz_surf','tau_xz','del_p'],
           'f':['x_hat','y_hat','z_surf','vx','vy','vz'],
          }
+
+
+def mkdir_p(path):
+    """
+    Make parent directories as needed and no error if existing. Works like `mkdir -p`.
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exc: # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else: raise
 
 
 class ismip_datum:
@@ -177,6 +193,12 @@ for i, df in enumerate(data_files):
     #print("------")
 
 
+#-----------------------
+# Setup the ouput files 
+#-----------------------
+mkdir_p(out_path)
+
+
 #------------------------------------------------------------------------
 # Recreate all the analysis figures in:
 # Pattyn, F., et al. (2008). Benchmark experiments for higher-order and 
@@ -222,6 +244,11 @@ for i, l in enumerate(plot_ls):
     a_ho_amin = numpy.amin(a_ho_lines,0)
     a_ho_amax = numpy.amax(a_ho_lines,0)
 
+    out_data = numpy.column_stack((fs_data_a[0].x_hat, a_fs_amin, a_fs_amax, a_fs_mean, a_ho_amin, a_ho_amax, a_ho_mean))
+    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
+                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    numpy.savetxt(out_path+'ExpA_Fig5_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
+
     plt.subplot(2,3,i+1)
     
     plt.fill_between(fs_data_a[0].x_hat.T, a_ho_amin, a_ho_amax, facecolor='green', alpha=0.5)
@@ -237,7 +264,7 @@ for i, l in enumerate(plot_ls):
     
     plt.title(str(int(l))+'km')
 
-plt.savefig('ExpA_Fig5', bbox_inches='tight')
+plt.savefig(out_path+'ExpA_Fig5', bbox_inches='tight')
 plt.show()
 
 
@@ -272,6 +299,11 @@ for i, l in enumerate(plot_ls):
     c_ho_amin = numpy.amin(c_ho_lines,0)
     c_ho_amax = numpy.amax(c_ho_lines,0)
 
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, c_fs_amin, c_fs_amax, c_fs_mean, c_ho_amin, c_ho_amax, c_ho_mean))
+    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
+                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    numpy.savetxt(out_path+'ExpC_Fig8_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
+
     plt.subplot(2,3,i+1)
     
     plt.fill_between(fs_data_c[0].x_hat.T, c_ho_amin, c_ho_amax, facecolor='green', alpha=0.5)
@@ -287,7 +319,7 @@ for i, l in enumerate(plot_ls):
     
     plt.title(str(int(l))+'km')
 
-plt.savefig('ExpC_Fig8', bbox_inches='tight')
+plt.savefig(out_path+'ExpC_Fig8', bbox_inches='tight')
 plt.show()
 
 
@@ -325,11 +357,16 @@ for i, l in enumerate(plot_ls):
 
     plt.subplot(2,1,i+1)
    
-    plt.fill_between(ho_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
-    plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_ho_amin, f_ho_amax, f_ho_mean))
+    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
+                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    numpy.savetxt(out_path+'ExpF_Fig12_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
+
+    plt.fill_between(ho_data_f[0].y_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_f[0].y_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
     
-    plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
-    plt.plot(ho_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+    plt.plot(fs_data_f[0].y_hat.T, f_fs_mean, 'b-', linewidth=2)
+    plt.plot(ho_data_f[0].y_hat.T, f_ho_mean, 'g-', linewidth=2)
 
     if i+1 > 1:
         plt.xlabel('Distance from center (km)')
@@ -340,7 +377,7 @@ for i, l in enumerate(plot_ls):
 
     plt.ylabel('Surface (m)')
 
-plt.savefig('ExpF_Fig12', bbox_inches='tight')
+plt.savefig(out_path+'ExpF_Fig12', bbox_inches='tight')
 plt.show()
 
 
@@ -373,13 +410,18 @@ for i, l in enumerate(plot_ls):
     f_ho_amin = numpy.amin(f_ho_lines,0)
     f_ho_amax = numpy.amax(f_ho_lines,0)
 
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_ho_amin, f_ho_amax, f_ho_mean))
+    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
+                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    numpy.savetxt(out_path+'ExpF_Fig13_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
+
     plt.subplot(2,1,i+1)
    
-    plt.fill_between(ho_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
-    plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
+    plt.fill_between(ho_data_f[0].y_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+    plt.fill_between(fs_data_f[0].y_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
     
-    plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
-    plt.plot(ho_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+    plt.plot(fs_data_f[0].y_hat.T, f_fs_mean, 'b-', linewidth=2)
+    plt.plot(ho_data_f[0].y_hat.T, f_ho_mean, 'g-', linewidth=2)
 
     if i+1 > 1:
         plt.xlabel('Distance from center (km)')
@@ -390,11 +432,9 @@ for i, l in enumerate(plot_ls):
 
     plt.ylabel('Velocity (m a$^{-1}$)')
 
-plt.savefig('ExpF_Fig13', bbox_inches='tight')
+plt.savefig(out_path+'ExpF_Fig13', bbox_inches='tight')
 plt.show()
 
-
-#TODO: Ouput plot data.
 
 
 
