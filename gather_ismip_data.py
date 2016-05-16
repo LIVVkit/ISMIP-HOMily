@@ -4,6 +4,13 @@
 This script gathers all the ISMIP-HOM experiments' data.
 """
 
+
+#FIXME: There are some problems with the plots.
+#       Fig. 5; 5km. In our plots there is an downward wiggle in the full stokes
+#                    solutions on the velocity peak at ~ 3/4 x_hat shown in the 
+#                    paper figure. Why?
+
+
 import os
 import numpy
 import scipy
@@ -123,10 +130,18 @@ class ismip_datum:
             self.vnorm_surf_i = self.vnorm_surf_i.reshape(self.x_hat_grid.shape)
 
         elif self.x_hat_grid.size and exp in ['f']:
-            self.surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
-            self.vx_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
-            self.vy_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,4], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
-            self.vz_surf_i = scipy.interpolate.griddata(self.array[:,0:2], self.array[:,5], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            #NOTE: Some of the Exp. F data is reported in the scaled coordinate system 
+            #      (x_hat), and others is reported in the cartesian coordinate system (x).
+            #      This normalizes the coordinate systems. 
+            xy_f = self.array[:,0:2]
+            if xy_f[0,0] < -1.0:
+                xy_f = xy_f/100.0 + 0.5
+            
+            self.surf_i = scipy.interpolate.griddata(   xy_f, self.array[:,2], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vx_surf_i = scipy.interpolate.griddata(xy_f, self.array[:,3], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vy_surf_i = scipy.interpolate.griddata(xy_f, self.array[:,4], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            self.vz_surf_i = scipy.interpolate.griddata(xy_f, self.array[:,5], (self.x_hat_grid.ravel(), self.y_hat_grid.ravel()), method='linear')
+            
             self.vnorm_surf_i = numpy.sqrt( numpy.square(self.vx_surf_i) + numpy.square(self.vy_surf_i) + numpy.square(self.vz_surf_i) )
             
             self.surf_i = self.surf_i.reshape(self.x_hat_grid.shape)
@@ -309,12 +324,12 @@ for i, l in enumerate(plot_ls):
     f_ho_amax = numpy.amax(f_ho_lines,0)
 
     plt.subplot(2,1,i+1)
-    
-    plt.fill_between(fs_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+   
+    plt.fill_between(ho_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
     plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
     
     plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
-    plt.plot(fs_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+    plt.plot(ho_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
 
     if i+1 > 1:
         plt.xlabel('Distance from center (km)')
@@ -359,12 +374,12 @@ for i, l in enumerate(plot_ls):
     f_ho_amax = numpy.amax(f_ho_lines,0)
 
     plt.subplot(2,1,i+1)
-    
-    plt.fill_between(fs_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
+   
+    plt.fill_between(ho_data_f[0].x_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
     plt.fill_between(fs_data_f[0].x_hat.T, f_fs_amin, f_fs_amax, facecolor='blue', alpha=0.5)
     
     plt.plot(fs_data_f[0].x_hat.T, f_fs_mean, 'b-', linewidth=2)
-    plt.plot(fs_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
+    plt.plot(ho_data_f[0].x_hat.T, f_ho_mean, 'g-', linewidth=2)
 
     if i+1 > 1:
         plt.xlabel('Distance from center (km)')
@@ -382,12 +397,6 @@ plt.show()
 #TODO: Ouput plot data.
 
 
-#FIXME: There are some problems with the plots.
-#       Fig. 5; 5km. In our plots there is an downward wiggle in the full stokes
-#                    solutions on the velocity peak at ~ 3/4 x_hat shown in the 
-#                    paper figure. Why?
-#FIXME: Fig. 12 and 13. There is a much, much broader range in our plots than
-#                       shown in the paper. Why?
 
 
 
