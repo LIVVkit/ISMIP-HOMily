@@ -5,10 +5,9 @@ This script gathers all the ISMIP-HOM experiments' data.
 """
 
 
-#FIXME: There are some problems with the plots.
-#       Fig. 5; 5km. In our plots there is an downward wiggle in the full stokes
-#                    solutions on the velocity peak at ~ 3/4 x_hat shown in the 
-#                    paper figure. Why?
+#FIXME: There are some problems with the recreation of the 5km subplot of Fig. 5.
+#       In our plots there is an downward wiggle in the full stokes solutions
+#       on the velocity peak at ~ 3/4 x_hat shown in the paper figure. Why?
 
 
 import os
@@ -66,7 +65,7 @@ def mkdir_p(path):
 
 
 class ismip_datum:
-    """A class to hold each model's data"""
+    """A class to hold and process each model's data"""
     def __init__(self, data_file):
         self.df = data_file
         self.M, self.E, self.L = self.parse_file(data_file)
@@ -111,8 +110,11 @@ class ismip_datum:
 
     def make_grid(self, exp):
         """
+        Make the interpolation grids. 
+
         For experiment A and C, the plots are made at y = L/4 or 1/4 y_hat. For
-        experiment F, the plots are made along 1/2 x_hat. 
+        experiment F, the plots are made along 1/2 x_hat. The grids then will
+        always include the y = 1/4 y_hat line and the x = 1/2 x_hat line.
         """
 
         if exp in  ['a','c','f']:
