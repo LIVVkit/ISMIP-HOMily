@@ -42,6 +42,7 @@ This script gathers all the ISMIP-HOM experiments' data.
 import os
 import numpy
 import scipy
+import errno
 import fnmatch
 
 import scipy.interpolate
