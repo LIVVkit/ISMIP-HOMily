@@ -413,7 +413,7 @@ plt.savefig(out_path+'ExpF_Fig12', bbox_inches='tight')
 plt.show()
 
 
-# figure 13: Norm of the stead state surface velocit along the central flowline for Exp. F
+# figure 13: Norm of the stead state surface velocity along the central flowline for Exp. F
 # for the no-sliding (top) and sliding (bottom) experiment. The black line
 # indicates the analytical solution [Note: I don't actually see this in the
 # figure].
