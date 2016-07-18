@@ -266,19 +266,22 @@ plot_ls = ['005','010','020','040','080','160']
 for i, l in enumerate(plot_ls):
     a_fs_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in fs_data_a if data.L == l])
   
-    a_fs_mean = numpy.mean(a_fs_lines,0)
     a_fs_amin = numpy.amin(a_fs_lines,0)
     a_fs_amax = numpy.amax(a_fs_lines,0)
+    a_fs_mean = numpy.mean(a_fs_lines,0)
+    a_fs_stdd = numpy.std(a_fs_lines,0)
 
     a_ho_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in ho_data_a if data.L == l])
   
-    a_ho_mean = numpy.mean(a_ho_lines,0)
     a_ho_amin = numpy.amin(a_ho_lines,0)
     a_ho_amax = numpy.amax(a_ho_lines,0)
+    a_ho_mean = numpy.mean(a_ho_lines,0)
+    a_ho_stdd = numpy.std(a_ho_lines,0)
 
-    out_data = numpy.column_stack((fs_data_a[0].x_hat, a_fs_amin, a_fs_amax, a_fs_mean, a_ho_amin, a_ho_amax, a_ho_mean))
-    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
-                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    out_data = numpy.column_stack((fs_data_a[0].x_hat, a_fs_amin, a_fs_amax, a_fs_mean, a_fs_stdd, 
+                                                       a_ho_amin, a_ho_amax, a_ho_mean, a_ho_stdd ))
+    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean',  'full-stokes std', 
+                           'higher-order min', 'higher-order max', 'higher-order mean', 'higher-order std' ]
     numpy.savetxt(out_path+'ExpA_Fig5_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
 
     plt.subplot(2,3,i+1)
@@ -321,19 +324,22 @@ plot_ls = ['005','010','020','040','080','160']
 for i, l in enumerate(plot_ls):
     c_fs_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in fs_data_c if data.L == l])
   
-    c_fs_mean = numpy.mean(c_fs_lines,0)
     c_fs_amin = numpy.amin(c_fs_lines,0)
     c_fs_amax = numpy.amax(c_fs_lines,0)
+    c_fs_mean = numpy.mean(c_fs_lines,0)
+    c_fs_stdd = numpy.std(c_fs_lines,0)
 
     c_ho_lines = numpy.array([data.vnorm_surf_i[:,data.points_p_quarter] for data in ho_data_c if data.L == l])
   
-    c_ho_mean = numpy.mean(c_ho_lines,0)
     c_ho_amin = numpy.amin(c_ho_lines,0)
     c_ho_amax = numpy.amax(c_ho_lines,0)
+    c_ho_mean = numpy.mean(c_ho_lines,0)
+    c_ho_stdd = numpy.std(c_ho_lines,0)
 
-    out_data = numpy.column_stack((fs_data_c[0].x_hat, c_fs_amin, c_fs_amax, c_fs_mean, c_ho_amin, c_ho_amax, c_ho_mean))
-    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
-                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, c_fs_amin, c_fs_amax, c_fs_mean, c_fs_stdd, 
+                                                       c_ho_amin, c_ho_amax, c_ho_mean, c_ho_stdd ))
+    out_header = ['x_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean',  'full-stokes std', 
+                           'higher-order min', 'higher-order max', 'higher-order mean', 'higher-order std' ]
     numpy.savetxt(out_path+'ExpC_Fig8_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
 
     plt.subplot(2,3,i+1)
@@ -377,21 +383,24 @@ plot_ls = ['000','001']
 for i, l in enumerate(plot_ls):
     f_fs_lines = numpy.array([data.surf_i[data.points_p_quarter*2,:] for data in fs_data_f if data.L == l])
   
-    f_fs_mean = numpy.mean(f_fs_lines,0)
     f_fs_amin = numpy.amin(f_fs_lines,0)
     f_fs_amax = numpy.amax(f_fs_lines,0)
+    f_fs_mean = numpy.mean(f_fs_lines,0)
+    f_fs_stdd = numpy.std(f_fs_lines,0)
 
     f_ho_lines = numpy.array([data.surf_i[data.points_p_quarter*2,:] for data in ho_data_f if data.L == l])
   
-    f_ho_mean = numpy.mean(f_ho_lines,0)
     f_ho_amin = numpy.amin(f_ho_lines,0)
     f_ho_amax = numpy.amax(f_ho_lines,0)
+    f_ho_mean = numpy.mean(f_ho_lines,0)
+    f_ho_stdd = numpy.std(f_ho_lines,0)
 
     plt.subplot(2,1,i+1)
    
-    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_ho_amin, f_ho_amax, f_ho_mean))
-    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
-                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_fs_stdd, 
+                                                       f_ho_amin, f_ho_amax, f_ho_mean, f_ho_stdd ))
+    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean',  'full-stokes std', 
+                           'higher-order min', 'higher-order max', 'higher-order mean', 'higher-order std' ]
     numpy.savetxt(out_path+'ExpF_Fig12_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
 
     plt.fill_between(ho_data_f[0].y_hat.T, f_ho_amin, f_ho_amax, facecolor='green', alpha=0.5)
@@ -432,19 +441,22 @@ plot_ls = ['000','001']
 for i, l in enumerate(plot_ls):
     f_fs_lines = numpy.array([data.vnorm_surf_i[data.points_p_quarter*2,:] for data in fs_data_f if data.L == l])
   
-    f_fs_mean = numpy.mean(f_fs_lines,0)
     f_fs_amin = numpy.amin(f_fs_lines,0)
     f_fs_amax = numpy.amax(f_fs_lines,0)
+    f_fs_mean = numpy.mean(f_fs_lines,0)
+    f_fs_stdd = numpy.std(f_fs_lines,0)
 
     f_ho_lines = numpy.array([data.vnorm_surf_i[data.points_p_quarter*2,:] for data in ho_data_f if data.L == l])
   
-    f_ho_mean = numpy.mean(f_ho_lines,0)
     f_ho_amin = numpy.amin(f_ho_lines,0)
     f_ho_amax = numpy.amax(f_ho_lines,0)
+    f_ho_mean = numpy.mean(f_ho_lines,0)
+    f_fs_stdd = numpy.std(f_fs_lines,0)
 
-    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_ho_amin, f_ho_amax, f_ho_mean))
-    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean', 
-                           'higher-order min', 'higher-order max', 'higher-order mean' ]
+    out_data = numpy.column_stack((fs_data_c[0].x_hat, f_fs_amin, f_fs_amax, f_fs_mean, f_fs_stdd, 
+                                                       f_ho_amin, f_ho_amax, f_ho_mean, f_ho_stdd ))
+    out_header = ['y_hat',  'full-stokes min',  'full-stokes max',  'full-stokes mean',  'full-stokes std', 
+                           'higher-order min', 'higher-order max', 'higher-order mean', 'higher-order std' ]
     numpy.savetxt(out_path+'ExpF_Fig13_'+l+'.txt', out_data, delimiter=',', header=','.join(out_header))
 
     plt.subplot(2,1,i+1)
